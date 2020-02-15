@@ -3,22 +3,12 @@ using System.Drawing;
 using System.Net;
 using Lidgren.Network;
 using OpenTK;
-using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Input;
 using Serilog;
 
 namespace GameDemo
 {
-    public interface IGameClient : IDisposable
-    {
-        void Connect(IPEndPoint endPoint);
-
-        void ConnectLocalhost();
-
-        void Disconnect();
-    }
-
     public class GameClient : IGameClient
     {
         private readonly ILogger _logger;
@@ -49,12 +39,10 @@ namespace GameDemo
             _window.Dispose();
         }
 
-        public GameClient()
+        public GameClient(ILogger logger, IGameWindowFactory gameWindowFactory)
         {
-            var primaryDisplayBounds = DisplayDevice.Default.Bounds;
-
-            _window = new GameWindow(1280, 720, GraphicsMode.Default, "GameArchitecture Experiments", GameWindowFlags.Default, DisplayDevice.Default, 3, 3, GraphicsContextFlags.Debug);
-            _window.Location = new System.Drawing.Point(primaryDisplayBounds.Width / 2 - _window.Width / 2, primaryDisplayBounds.Height / 2 - _window.Height / 2);
+            _logger = logger;
+            _window = gameWindowFactory.CreateGameWindowWindowed(1280, 720);
             _window.Load += WindowLoad;
             _window.RenderFrame += WindowRenderFrame;
             _window.UpdateFrame += WindowUpdateFrame;

@@ -28,6 +28,9 @@ namespace GameDemo
 
             container.RegisterInstance(Log.Logger);
             container.Register<Program>(Reuse.Singleton);
+            container.Register<IGameWindowFactory, GameWindowFactory>(Reuse.Singleton);
+            container.Register<IGameServer, GameServer>(Reuse.Singleton);
+            container.Register<IGameClient, GameClient>(Reuse.Singleton);
             container.Register<IGame, Game>(Reuse.Singleton);
             return container;
         }
