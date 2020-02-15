@@ -27,8 +27,8 @@ namespace Lidgren.Network
 	/// </summary>
 	public sealed class NetBitVector
 	{
-		private readonly int[] m_data;
-		private int m_numBitsSet;
+		private readonly int[] _data;
+		private int _numBitsSet;
 
         /// <summary>
         /// Gets the number of bits/booleans stored in this vector
@@ -41,7 +41,7 @@ namespace Lidgren.Network
         public NetBitVector(int bitsCapacity)
 		{
             Capacity = bitsCapacity;
-			m_data = new int[(bitsCapacity + 31) / 32];
+			_data = new int[(bitsCapacity + 31) / 32];
 		}
 
 		/// <summary>
@@ -49,7 +49,7 @@ namespace Lidgren.Network
 		/// </summary>
 		public bool IsEmpty()
 		{
-			return m_numBitsSet == 0;
+			return _numBitsSet == 0;
 		}
 
 		/// <summary>
@@ -58,7 +58,7 @@ namespace Lidgren.Network
 		/// <returns></returns>
 		public int Count()
 		{
-			return m_numBitsSet;
+			return _numBitsSet;
 		}
 
 		/// <summary>
@@ -66,20 +66,20 @@ namespace Lidgren.Network
 		/// </summary>
 		public void RotateDown()
 		{
-			int lenMinusOne = m_data.Length - 1;
+			int lenMinusOne = _data.Length - 1;
 
-			int firstBit = m_data[0] & 1;
+			int firstBit = _data[0] & 1;
 			for (int i = 0; i < lenMinusOne; i++)
-				m_data[i] = ((m_data[i] >> 1) & ~(1 << 31)) | m_data[i + 1] << 31;
+				_data[i] = ((_data[i] >> 1) & ~(1 << 31)) | _data[i + 1] << 31;
 
 			int lastIndex = Capacity - 1 - (32 * lenMinusOne);
 
 			// special handling of last int
-			int cur = m_data[lenMinusOne];
+			int cur = _data[lenMinusOne];
             cur >>= 1;
 			cur |= firstBit << lastIndex;
 
-			m_data[lenMinusOne] = cur;
+			_data[lenMinusOne] = cur;
 		}
 
 		/// <summary>
@@ -89,11 +89,11 @@ namespace Lidgren.Network
 		{
 			int idx = 0;
 
-			int data = m_data[0];
+			int data = _data[0];
 			while (data == 0)
 			{
 				idx++;
-				data = m_data[idx];
+				data = _data[idx];
 			}
 
 			int a = 0;
@@ -110,7 +110,7 @@ namespace Lidgren.Network
 		{
 			NetException.Assert(bitIndex >= 0 && bitIndex < Capacity);
 
-			return (m_data[bitIndex / 32] & (1 << (bitIndex % 32))) != 0;
+			return (_data[bitIndex / 32] & (1 << (bitIndex % 32))) != 0;
 		}
 
 		/// <summary>
@@ -123,15 +123,15 @@ namespace Lidgren.Network
 			int idx = bitIndex / 32;
 			if (value)
 			{
-				if ((m_data[idx] & (1 << (bitIndex % 32))) == 0)
-					m_numBitsSet++;
-				m_data[idx] |= (1 << (bitIndex % 32));
+				if ((_data[idx] & (1 << (bitIndex % 32))) == 0)
+					_numBitsSet++;
+				_data[idx] |= (1 << (bitIndex % 32));
 			}
 			else
 			{
-				if ((m_data[idx] & (1 << (bitIndex % 32))) != 0)
-					m_numBitsSet--;
-				m_data[idx] &= (~(1 << (bitIndex % 32)));
+				if ((_data[idx] & (1 << (bitIndex % 32))) != 0)
+					_numBitsSet--;
+				_data[idx] &= (~(1 << (bitIndex % 32)));
 			}
 		}
 
@@ -150,8 +150,8 @@ namespace Lidgren.Network
 		/// </summary>
 		public void Clear()
 		{
-			Array.Clear(m_data, 0, m_data.Length);
-			m_numBitsSet = 0;
+			Array.Clear(_data, 0, _data.Length);
+			_numBitsSet = 0;
 			NetException.Assert(this.IsEmpty());
 		}
 

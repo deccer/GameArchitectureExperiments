@@ -1,6 +1,5 @@
 ﻿#if !__ANDROID__ && !__CONSTRAINED__ && !WINDOWS_RUNTIME && !UNITY_STANDALONE_LINUX
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -9,10 +8,11 @@ using System.Security.Cryptography;
 
 namespace Lidgren.Network
 {
-	public static partial class NetUtility
+    public static partial class NetUtility
 	{
-		private static readonly long s_timeInitialized = Stopwatch.GetTimestamp();
-		private static readonly double s_dInvFreq = 1.0 / (double)Stopwatch.Frequency;
+		private static readonly long _timeInitialized = Stopwatch.GetTimestamp();
+
+		private static readonly double _dInvFreq = 1.0 / (double)Stopwatch.Frequency;
 
 		public static ulong GetPlatformSeed(int seedInc)
 		{
@@ -20,7 +20,7 @@ namespace Lidgren.Network
 			return seed ^ ((ulong)Environment.WorkingSet + (ulong)seedInc);
 		}
 
-		public static double Now { get { return (double)(Stopwatch.GetTimestamp() - s_timeInitialized) * s_dInvFreq; } }
+		public static double Now { get { return (double)(Stopwatch.GetTimestamp() - _timeInitialized) * _dInvFreq; } }
 
 		private static NetworkInterface GetNetworkInterface()
 		{
@@ -134,22 +134,22 @@ namespace Lidgren.Network
 			return new IPAddress(bytes);
 		}
 
-		private static readonly SHA256 s_sha = SHA256.Create();
+		private static readonly SHA256 _sha = SHA256.Create();
 		public static byte[] ComputeSHAHash(byte[] bytes, int offset, int count)
 		{
-			return s_sha.ComputeHash(bytes, offset, count);
+			return _sha.ComputeHash(bytes, offset, count);
 		}
 	}
 
 	public static partial class NetTime
 	{
-		private static readonly long s_timeInitialized = Stopwatch.GetTimestamp();
-		private static readonly double s_dInvFreq = 1.0 / (double)Stopwatch.Frequency;
+		private static readonly long _timeInitialized = Stopwatch.GetTimestamp();
+		private static readonly double _dInvFreq = 1.0 / (double)Stopwatch.Frequency;
 
 		/// <summary>
 		/// Get number of seconds since the application started
 		/// </summary>
-		public static double Now { get { return (double)(Stopwatch.GetTimestamp() - s_timeInitialized) * s_dInvFreq; } }
+		public static double Now { get { return (double)(Stopwatch.GetTimestamp() - _timeInitialized) * _dInvFreq; } }
 	}
 }
 #endif

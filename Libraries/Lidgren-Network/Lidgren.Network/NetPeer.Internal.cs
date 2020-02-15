@@ -14,22 +14,22 @@ namespace Lidgren.Network
 {
     public partial class NetPeer
     {
-        private NetPeerStatus m_status;
-        private Thread m_networkThread;
-        private Socket m_socket;
+        private NetPeerStatus _status;
+        private Thread _networkThread;
+        private Socket _socket;
         internal byte[] m_sendBuffer;
         internal byte[] m_receiveBuffer;
         internal NetIncomingMessage m_readHelperMessage;
-        private EndPoint m_senderRemote;
-        private readonly object m_initializeLock = new object();
-        private uint m_frameCounter;
-        private double m_lastHeartbeat;
-        private double m_lastSocketBind = float.MinValue;
-        private NetUPnP m_upnp;
+        private EndPoint _senderRemote;
+        private readonly object _initializeLock = new object();
+        private uint _frameCounter;
+        private double _lastHeartbeat;
+        private double _lastSocketBind = float.MinValue;
+        private NetUPnP _upnp;
         internal bool m_needFlushSendQueue;
 
         internal readonly NetPeerConfiguration m_configuration;
-        private readonly NetQueue<NetIncomingMessage> m_releasedIncomingMessages;
+        private readonly NetQueue<NetIncomingMessage> _releasedIncomingMessages;
         internal readonly NetQueue<NetTuple<NetEndPoint, NetOutgoingMessage>> m_unsentUnconnectedMessages;
 
         internal Dictionary<NetEndPoint, NetConnection> m_handshakes;
@@ -38,13 +38,13 @@ namespace Lidgren.Network
         internal long m_uniqueIdentifier;
         internal bool m_executeFlushSendQueue;
 
-        private AutoResetEvent m_messageReceivedEvent;
-        private List<NetTuple<SynchronizationContext, SendOrPostCallback>> m_receiveCallbacks;
+        private AutoResetEvent _messageReceivedEvent;
+        private List<NetTuple<SynchronizationContext, SendOrPostCallback>> _receiveCallbacks;
 
         /// <summary>
         /// Gets the socket, if Start() has been called
         /// </summary>
-        public Socket Socket { get { return m_socket; } }
+        public Socket Socket { get { return _socket; } }
 
         /// <summary>
         /// Call this to register a callback for when a new message arrives
@@ -55,7 +55,7 @@ namespace Lidgren.Network
                 syncContext = SynchronizationContext.Current;
             if (syncContext == null)
                 throw new NetException("Need a SynchronizationContext to register callback on correct thread!");
-            (m_receiveCallbacks ?? (m_receiveCallbacks = new List<NetTuple<SynchronizationContext, SendOrPostCallback>>())).Add(new NetTuple<SynchronizationContext, SendOrPostCallback>(syncContext, callback));
+            (_receiveCallbacks ?? (_receiveCallbacks = new List<NetTuple<SynchronizationContext, SendOrPostCallback>>())).Add(new NetTuple<SynchronizationContext, SendOrPostCallback>(syncContext, callback));
         }
 
         /// <summary>
@@ -63,14 +63,14 @@ namespace Lidgren.Network
         /// </summary>
         public void UnregisterReceivedCallback(SendOrPostCallback callback)
         {
-            if (m_receiveCallbacks == null)
+            if (_receiveCallbacks == null)
                 return;
 
             // remove all callbacks regardless of sync context
-            m_receiveCallbacks.RemoveAll(tuple => tuple.Item2.Equals(callback));
+            _receiveCallbacks.RemoveAll(tuple => tuple.Item2.Equals(callback));
 
-            if (m_receiveCallbacks.Count < 1)
-                m_receiveCallbacks = null;
+            if (_receiveCallbacks.Count < 1)
+                _receiveCallbacks = null;
         }
 
         internal void ReleaseMessage(NetIncomingMessage msg)
@@ -83,13 +83,13 @@ namespace Lidgren.Network
                 return;
             }
 
-            m_releasedIncomingMessages.Enqueue(msg);
+            _releasedIncomingMessages.Enqueue(msg);
 
-            m_messageReceivedEvent?.Set();
+            _messageReceivedEvent?.Set();
 
-            if (m_receiveCallbacks != null)
+            if (_receiveCallbacks != null)
             {
-                foreach (var tuple in m_receiveCallbacks)
+                foreach (var tuple in _receiveCallbacks)
                 {
                     try
                     {
@@ -106,12 +106,12 @@ namespace Lidgren.Network
         private void BindSocket(bool reBind)
         {
             double now = NetTime.Now;
-            if (now - m_lastSocketBind < 1.0)
+            if (now - _lastSocketBind < 1.0)
             {
-                LogDebug("Suppressed socket rebind; last bound " + (now - m_lastSocketBind) + " seconds ago");
+                LogDebug("Suppressed socket rebind; last bound " + (now - _lastSocketBind) + " seconds ago");
                 return; // only allow rebind once every second
             }
-            m_lastSocketBind = now;
+            _lastSocketBind = now;
 
             using (var mutex = new Mutex(false, "Global\\lidgrenSocketBind"))
             {
@@ -119,32 +119,32 @@ namespace Lidgren.Network
                 {
                     mutex.WaitOne();
 
-                    if (m_socket == null)
-                        m_socket = new Socket(m_configuration.LocalAddress.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                    if (_socket == null)
+                        _socket = new Socket(m_configuration.LocalAddress.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
 
                     if (reBind)
-                        m_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, (int)1);
+                        _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, (int)1);
 
-                    m_socket.ReceiveBufferSize = m_configuration.ReceiveBufferSize;
-                    m_socket.SendBufferSize = m_configuration.SendBufferSize;
-                    m_socket.Blocking = false;
+                    _socket.ReceiveBufferSize = m_configuration.ReceiveBufferSize;
+                    _socket.SendBufferSize = m_configuration.SendBufferSize;
+                    _socket.Blocking = false;
 
                     if (m_configuration.DualStack && m_configuration.LocalAddress.AddressFamily == AddressFamily.InterNetworkV6)
-                        m_socket.DualMode = true;
+                        _socket.DualMode = true;
 
                     var localAddress = m_configuration.DualStack
                         ? m_configuration.LocalAddress.MapToIPv6()
                         : m_configuration.LocalAddress;
 
-                    var ep = (EndPoint)new NetEndPoint(localAddress, reBind ? m_listenPort : m_configuration.Port);
-                    m_socket.Bind(ep);
+                    var ep = (EndPoint)new NetEndPoint(localAddress, reBind ? Port : m_configuration.Port);
+                    _socket.Bind(ep);
 
                     try
                     {
                         const uint IOC_IN = 0x80000000;
                         const uint IOC_VENDOR = 0x18000000;
                         const uint SIO_UDP_CONNRESET = IOC_IN | IOC_VENDOR | 12;
-                        m_socket.IOControl(unchecked((int)SIO_UDP_CONNRESET), new byte[] { Convert.ToByte(false) }, null);
+                        _socket.IOControl(unchecked((int)SIO_UDP_CONNRESET), new byte[] { Convert.ToByte(false) }, null);
                     }
                     catch
                     {
@@ -157,26 +157,26 @@ namespace Lidgren.Network
                 }
             }
 
-            var boundEp = m_socket.LocalEndPoint as NetEndPoint;
-            LogDebug("Socket bound to " + boundEp + ": " + m_socket.IsBound);
-            m_listenPort = boundEp.Port;
+            var boundEp = _socket.LocalEndPoint as NetEndPoint;
+            LogDebug("Socket bound to " + boundEp + ": " + _socket.IsBound);
+            Port = boundEp.Port;
         }
 
         private void InitializeNetwork()
         {
-            lock (m_initializeLock)
+            lock (_initializeLock)
             {
                 m_configuration.Lock();
 
-                if (m_status == NetPeerStatus.Running)
+                if (_status == NetPeerStatus.Running)
                     return;
 
                 if (m_configuration.m_enableUPnP)
-                    m_upnp = new NetUPnP(this);
+                    _upnp = new NetUPnP(this);
 
                 InitializePools();
 
-                m_releasedIncomingMessages.Clear();
+                _releasedIncomingMessages.Clear();
                 m_unsentUnconnectedMessages.Clear();
                 m_handshakes.Clear();
 
@@ -192,14 +192,14 @@ namespace Lidgren.Network
 
                 byte[] macBytes = NetUtility.GetMacAddressBytes();
 
-                var boundEp = m_socket.LocalEndPoint as NetEndPoint;
+                var boundEp = _socket.LocalEndPoint as NetEndPoint;
                 byte[] epBytes = BitConverter.GetBytes(boundEp.GetHashCode());
                 byte[] combined = new byte[epBytes.Length + macBytes.Length];
                 Array.Copy(epBytes, 0, combined, 0, epBytes.Length);
                 Array.Copy(macBytes, 0, combined, epBytes.Length, macBytes.Length);
                 m_uniqueIdentifier = BitConverter.ToInt64(NetUtility.ComputeSHAHash(combined), 0);
 
-                m_status = NetPeerStatus.Running;
+                _status = NetPeerStatus.Running;
             }
         }
 
@@ -222,7 +222,7 @@ namespace Lidgren.Network
                 {
                     LogWarning(ex.ToString());
                 }
-            } while (m_status == NetPeerStatus.Running);
+            } while (_status == NetPeerStatus.Running);
 
             //
             // perform shutdown
@@ -263,7 +263,7 @@ namespace Lidgren.Network
             // shut down connections
             foreach (NetConnection conn in list)
             {
-                conn.Shutdown(m_shutdownReason);
+                conn.Shutdown(_shutdownReason);
             }
             FlushDelayedPackets();
 
@@ -272,15 +272,15 @@ namespace Lidgren.Network
 
             NetUtility.Sleep(10);
 
-            lock (m_initializeLock)
+            lock (_initializeLock)
             {
                 try
                 {
-                    if (m_socket != null)
+                    if (_socket != null)
                     {
                         try
                         {
-                            m_socket.Shutdown(SocketShutdown.Receive);
+                            _socket.Shutdown(SocketShutdown.Receive);
                         }
                         catch (Exception ex)
                         {
@@ -289,7 +289,7 @@ namespace Lidgren.Network
 
                         try
                         {
-                            m_socket.Close(2); // 2 seconds timeout
+                            _socket.Close(2); // 2 seconds timeout
                         }
                         catch (Exception ex)
                         {
@@ -299,20 +299,20 @@ namespace Lidgren.Network
                 }
                 finally
                 {
-                    m_socket = null;
-                    m_status = NetPeerStatus.NotRunning;
+                    _socket = null;
+                    _status = NetPeerStatus.NotRunning;
                     LogDebug("Shutdown complete");
 
                     // wake up any threads waiting for server shutdown
-                    m_messageReceivedEvent?.Set();
+                    _messageReceivedEvent?.Set();
                 }
 
-                m_lastSocketBind = float.MinValue;
+                _lastSocketBind = float.MinValue;
                 m_receiveBuffer = null;
                 m_sendBuffer = null;
                 m_unsentUnconnectedMessages.Clear();
                 m_connections.Clear();
-                m_connectionLookup.Clear();
+                _connectionLookup.Clear();
                 m_handshakes.Clear();
             }
 
@@ -324,7 +324,7 @@ namespace Lidgren.Network
             VerifyNetworkThread();
 
             double now = NetTime.Now;
-            double delta = now - m_lastHeartbeat;
+            double delta = now - _lastHeartbeat;
 
             int maxCHBpS = 1250 - m_connections.Count;
             if (maxCHBpS < 250)
@@ -334,11 +334,11 @@ namespace Lidgren.Network
 
             if (delta > (1.0 / (double)maxCHBpS) || delta < 0.0) // max connection heartbeats/second max
             {
-                m_frameCounter++;
-                m_lastHeartbeat = now;
+                _frameCounter++;
+                _lastHeartbeat = now;
 
                 // do handshake heartbeats
-                if ((m_frameCounter % 3) == 0)
+                if ((_frameCounter % 3) == 0)
                 {
                     foreach (var kvp in m_handshakes)
                     {
@@ -381,14 +381,14 @@ namespace Lidgren.Network
                     for (int i = m_connections.Count - 1; i >= 0; i--)
                     {
                         var conn = m_connections[i];
-                        conn.Heartbeat(now, m_frameCounter);
+                        conn.Heartbeat(now, _frameCounter);
                         if (conn.m_status == NetConnectionStatus.Disconnected)
                         {
                             //
                             // remove connection
                             //
                             m_connections.RemoveAt(i);
-                            m_connectionLookup.Remove(conn.RemoteEndPoint);
+                            _connectionLookup.Remove(conn.RemoteEndPoint);
                         }
                     }
                 }
@@ -409,15 +409,15 @@ namespace Lidgren.Network
                 }
             }
 
-            m_upnp?.CheckForDiscoveryTimeout();
+            _upnp?.CheckForDiscoveryTimeout();
 
             //
             // read from socket
             //
-            if (m_socket == null)
+            if (_socket == null)
                 return;
 
-            if (!m_socket.Poll(1000, SelectMode.SelectRead)) // wait up to 1 ms for data to arrive
+            if (!_socket.Poll(1000, SelectMode.SelectRead)) // wait up to 1 ms for data to arrive
                 return;
 
             //if (m_socket == null || m_socket.Available < 1)
@@ -431,7 +431,7 @@ namespace Lidgren.Network
                 do
                 {
                     ReceiveSocketData(now);
-                } while (m_socket.Available > 0);
+                } while (_socket.Available > 0);
             }
             catch (SocketException sx)
             {
@@ -458,16 +458,16 @@ namespace Lidgren.Network
 
         private void ReceiveSocketData(double now)
         {
-            int bytesReceived = m_socket.ReceiveFrom(m_receiveBuffer, 0, m_receiveBuffer.Length, SocketFlags.None, ref m_senderRemote);
+            int bytesReceived = _socket.ReceiveFrom(m_receiveBuffer, 0, m_receiveBuffer.Length, SocketFlags.None, ref _senderRemote);
 
             if (bytesReceived < NetConstants.HeaderByteSize)
                 return;
 
             //LogVerbose("Received " + bytesReceived + " bytes");
 
-            var ipsender = (NetEndPoint)m_senderRemote;
+            var ipsender = (NetEndPoint)_senderRemote;
 
-            if (m_upnp != null && now < m_upnp.m_discoveryResponseDeadline && bytesReceived > 32)
+            if (_upnp != null && now < _upnp.m_discoveryResponseDeadline && bytesReceived > 32)
             {
                 // is this an UPnP response?
                 string resp = System.Text.Encoding.UTF8.GetString(m_receiveBuffer, 0, bytesReceived);
@@ -477,7 +477,7 @@ namespace Lidgren.Network
                     {
                         resp = resp.Substring(resp.IndexOf("location:", StringComparison.CurrentCultureIgnoreCase) + 9);
                         resp = resp.Substring(0, resp.IndexOf("\r")).Trim();
-                        m_upnp.ExtractServiceUrl(resp);
+                        _upnp.ExtractServiceUrl(resp);
                         return;
                     }
                     catch (Exception ex)
@@ -490,7 +490,7 @@ namespace Lidgren.Network
                 }
             }
 
-            m_connectionLookup.TryGetValue(ipsender, out NetConnection sender);
+            _connectionLookup.TryGetValue(ipsender, out NetConnection sender);
 
             //
             // parse packet into messages
@@ -680,13 +680,13 @@ namespace Lidgren.Network
                                     // Lets just assume the router decided to use this port instead
                                     //
                                     var hsconn = hs.Value;
-                                    m_connectionLookup.Remove(hs.Key);
+                                    _connectionLookup.Remove(hs.Key);
                                     m_handshakes.Remove(hs.Key);
 
                                     LogDebug("Detected host port change; rerouting connection to " + senderEndPoint);
                                     hsconn.MutateEndPoint(senderEndPoint);
 
-                                    m_connectionLookup.Add(senderEndPoint, hsconn);
+                                    _connectionLookup.Add(senderEndPoint, hsconn);
                                     m_handshakes.Add(senderEndPoint, hsconn);
 
                                     hsconn.ReceivedHandshake(now, tp, ptr, payloadByteLength);
@@ -753,7 +753,7 @@ namespace Lidgren.Network
                 else
                 {
                     m_connections.Add(conn);
-                    m_connectionLookup.Add(conn.m_remoteEndPoint, conn);
+                    _connectionLookup.Add(conn.m_remoteEndPoint, conn);
                 }
             }
         }
@@ -762,7 +762,7 @@ namespace Lidgren.Network
         internal void VerifyNetworkThread()
         {
             Thread ct = Thread.CurrentThread;
-            if (Thread.CurrentThread != m_networkThread)
+            if (Thread.CurrentThread != _networkThread)
                 throw new NetException("Executing on wrong thread! Should be library system thread (is " + ct.Name + " mId " + ct.ManagedThreadId + ")");
         }
 

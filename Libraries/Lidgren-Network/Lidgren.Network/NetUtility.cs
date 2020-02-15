@@ -38,7 +38,7 @@ namespace Lidgren.Network
 	/// </summary>
 	public static partial class NetUtility
 	{
-		private static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
+		private static readonly bool _isMono = Type.GetType("Mono.Runtime") != null;
 
 		/// <summary>
 		/// Resolve endpoint callback
@@ -77,12 +77,14 @@ namespace Lidgren.Network
 			return adr == null ? null : new NetEndPoint(adr, port);
 		}
 
-		private static IPAddress s_broadcastAddress;
+		private static IPAddress _broadcastAddress;
 		public static IPAddress GetCachedBroadcastAddress()
 		{
-			if (s_broadcastAddress == null)
-				s_broadcastAddress = GetBroadcastAddress();
-			return s_broadcastAddress;
+            if (_broadcastAddress == null)
+            {
+                _broadcastAddress = GetBroadcastAddress();
+            }
+            return _broadcastAddress;
 		}
 
 		/// <summary>
@@ -95,19 +97,18 @@ namespace Lidgren.Network
 
 			ipOrHost = ipOrHost.Trim();
 
-			NetAddress ipAddress = null;
-			if (NetAddress.TryParse(ipOrHost, out ipAddress))
-			{
-				if (ipAddress.AddressFamily == AddressFamily.InterNetwork || ipAddress.AddressFamily == AddressFamily.InterNetworkV6)
-				{
-					callback(ipAddress);
-					return;
-				}
-				throw new ArgumentException("This method will not currently resolve other than ipv4 addresses");
-			}
+            if (NetAddress.TryParse(ipOrHost, out NetAddress ipAddress))
+            {
+                if (ipAddress.AddressFamily == AddressFamily.InterNetwork || ipAddress.AddressFamily == AddressFamily.InterNetworkV6)
+                {
+                    callback(ipAddress);
+                    return;
+                }
+                throw new ArgumentException("This method will not currently resolve other than ipv4 addresses");
+            }
 
-			// ok must be a host name
-			IPHostEntry entry;
+            // ok must be a host name
+            IPHostEntry entry;
 			try
 			{
 				Dns.BeginGetHostEntry(ipOrHost, delegate(IAsyncResult result)
@@ -173,16 +174,15 @@ namespace Lidgren.Network
 
 			ipOrHost = ipOrHost.Trim();
 
-			NetAddress ipAddress = null;
-			if (NetAddress.TryParse(ipOrHost, out ipAddress))
-			{
-				if (ipAddress.AddressFamily == AddressFamily.InterNetwork || ipAddress.AddressFamily == AddressFamily.InterNetworkV6)
-					return ipAddress;
-				throw new ArgumentException("This method will not currently resolve other than IPv4 or IPv6 addresses");
-			}
+            if (NetAddress.TryParse(ipOrHost, out NetAddress ipAddress))
+            {
+                if (ipAddress.AddressFamily == AddressFamily.InterNetwork || ipAddress.AddressFamily == AddressFamily.InterNetworkV6)
+                    return ipAddress;
+                throw new ArgumentException("This method will not currently resolve other than IPv4 or IPv6 addresses");
+            }
 
-			// ok must be a host name
-			try
+            // ok must be a host name
+            try
 			{
 				var addresses = Dns.GetHostAddresses(ipOrHost);
 				if (addresses == null)
@@ -256,10 +256,9 @@ namespace Lidgren.Network
 		/// </summary>
 		public static bool IsLocal(NetAddress remote)
 		{
-			NetAddress mask;
-			var local = GetMyAddress(out mask);
+            var local = GetMyAddress(out NetAddress mask);
 
-			if (mask == null)
+            if (mask == null)
 				return false;
 
 			uint maskBits = BitConverter.ToUInt32(mask.GetAddressBytes(), 0);

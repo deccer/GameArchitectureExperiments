@@ -1,27 +1,26 @@
 ﻿#define USE_SHA256
 
 using System;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace Lidgren.Network
 {
-	/// <summary>
-	/// Helper methods for implementing SRP authentication
-	/// </summary>
-	public static class NetSRP
+    /// <summary>
+    /// Helper methods for implementing SRP authentication
+    /// </summary>
+    public static class NetSRP
 	{
-		private static readonly NetBigInteger N = new NetBigInteger("0115b8b692e0e045692cf280b436735c77a5a9e8a9e7ed56c965f87db5b2a2ece3", 16);
-		private static readonly NetBigInteger g = NetBigInteger.Two;
-		private static readonly NetBigInteger k = ComputeMultiplier();
-		
+		private static readonly NetBigInteger _n = new NetBigInteger("0115b8b692e0e045692cf280b436735c77a5a9e8a9e7ed56c965f87db5b2a2ece3", 16);
+		private static readonly NetBigInteger _g = NetBigInteger.Two;
+		private static readonly NetBigInteger _k = ComputeMultiplier();
+
 		/// <summary>
 		/// Compute multiplier (k)
 		/// </summary>
 		private static NetBigInteger ComputeMultiplier()
 		{
-			string one = NetUtility.ToHexString(N.ToByteArrayUnsigned());
-			string two = NetUtility.ToHexString(g.ToByteArrayUnsigned());
+			string one = NetUtility.ToHexString(_n.ToByteArrayUnsigned());
+			string two = NetUtility.ToHexString(_g.ToByteArrayUnsigned());
 
 			string ccstr = one + two.PadLeft(one.Length, '0');
 			byte[] cc = NetUtility.ToByteArray(ccstr);
@@ -74,7 +73,7 @@ namespace Lidgren.Network
 			NetBigInteger x = new NetBigInteger(NetUtility.ToHexString(privateKey), 16);
 
 			// Verifier (v) = g^x (mod N)
-			var serverVerifier = g.ModPow(x, N);
+			var serverVerifier = _g.ModPow(x, _n);
 
 			return serverVerifier.ToByteArrayUnsigned();
 		}
@@ -84,9 +83,9 @@ namespace Lidgren.Network
 		/// </summary>
 		public static byte[] ComputeClientEphemeral(byte[] clientPrivateEphemeral) // a
 		{
-			// A= g^a (mod N) 
+			// A= g^a (mod N)
 			NetBigInteger a = new NetBigInteger(NetUtility.ToHexString(clientPrivateEphemeral), 16);
-			NetBigInteger retval = g.ModPow(a, N);
+			NetBigInteger retval = _g.ModPow(a, _n);
 
 			return retval.ToByteArrayUnsigned();
 		}
@@ -99,10 +98,10 @@ namespace Lidgren.Network
 			var b = new NetBigInteger(NetUtility.ToHexString(serverPrivateEphemeral), 16);
 			var v = new NetBigInteger(NetUtility.ToHexString(verifier), 16);
 
-			// B = kv + g^b (mod N) 
-			var bb = g.ModPow(b, N);
-			var kv = v.Multiply(k);
-			var B = (kv.Add(bb)).Mod(N);
+			// B = kv + g^b (mod N)
+			var bb = _g.ModPow(b, _n);
+			var kv = v.Multiply(_k);
+			var B = (kv.Add(bb)).Mod(_n);
 
 			return B.ToByteArrayUnsigned();
 		}
@@ -137,7 +136,7 @@ namespace Lidgren.Network
 			var u = new NetBigInteger(NetUtility.ToHexString(udata), 16);
 			var b = new NetBigInteger(NetUtility.ToHexString(serverPrivateEphemeral), 16);
 
-			NetBigInteger retval = v.ModPow(u, N).Multiply(A).Mod(N).ModPow(b, N).Mod(N);
+			NetBigInteger retval = v.ModPow(u, _n).Multiply(A).Mod(_n).ModPow(b, _n).Mod(_n);
 
 			return retval.ToByteArrayUnsigned();
 		}
@@ -153,9 +152,9 @@ namespace Lidgren.Network
 			var u = new NetBigInteger(NetUtility.ToHexString(udata), 16);
 			var a = new NetBigInteger(NetUtility.ToHexString(clientPrivateEphemeral), 16);
 
-			var bx = g.ModPow(x, N);
-			var btmp = B.Add(N.Multiply(k)).Subtract(bx.Multiply(k)).Mod(N);
-			return btmp.ModPow(x.Multiply(u).Add(a), N).ToByteArrayUnsigned();
+			var bx = _g.ModPow(x, _n);
+			var btmp = B.Add(_n.Multiply(_k)).Subtract(bx.Multiply(_k)).Mod(_n);
+			return btmp.ModPow(x.Multiply(u).Add(a), _n).ToByteArrayUnsigned();
 		}
 
 		/// <summary>
@@ -164,7 +163,7 @@ namespace Lidgren.Network
 		public static NetXtea CreateEncryption(NetPeer peer, byte[] sessionValue)
 		{
 			var hash = NetUtility.ComputeSHAHash(sessionValue);
-			
+
 			var key = new byte[16];
 			for(int i=0;i<16;i++)
 			{

@@ -1,8 +1,6 @@
-﻿using System;
-
-namespace Lidgren.Network
+﻿namespace Lidgren.Network
 {
-	public partial class NetConnection  
+    public partial class NetConnection
 	{
 		private enum ExpandMTUStatus
 		{
@@ -13,14 +11,14 @@ namespace Lidgren.Network
 
 		private const int c_protocolMaxMTU = (int)((((float)ushort.MaxValue / 8.0f) - 1.0f));
 
-		private ExpandMTUStatus m_expandMTUStatus;
+		private ExpandMTUStatus _expandMTUStatus;
 
-		private int m_largestSuccessfulMTU;
-		private int m_smallestFailedMTU;
+		private int _largestSuccessfulMTU;
+		private int _smallestFailedMTU;
 
-		private int m_lastSentMTUAttemptSize;
-		private double m_lastSentMTUAttemptTime;
-		private int m_mtuAttemptFails;
+		private int _lastSentMTUAttemptSize;
+		private double _lastSentMTUAttemptTime;
+		private int _mtuAttemptFails;
 
 		internal int m_currentMTU;
 
@@ -31,18 +29,18 @@ namespace Lidgren.Network
 
 		internal void InitExpandMTU(double now)
 		{
-			m_lastSentMTUAttemptTime = now + m_peerConfiguration.m_expandMTUFrequency + 1.5f + m_averageRoundtripTime; // wait a tiny bit before starting to expand mtu
-			m_largestSuccessfulMTU = 512;
-			m_smallestFailedMTU = -1;
+			_lastSentMTUAttemptTime = now + m_peerConfiguration.m_expandMTUFrequency + 1.5f + _averageRoundtripTime; // wait a tiny bit before starting to expand mtu
+			_largestSuccessfulMTU = 512;
+			_smallestFailedMTU = -1;
 			m_currentMTU = m_peerConfiguration.MaximumTransmissionUnit;
 		}
 
 		private void MTUExpansionHeartbeat(double now)
 		{
-			if (m_expandMTUStatus == ExpandMTUStatus.Finished)
+			if (_expandMTUStatus == ExpandMTUStatus.Finished)
 				return;
 
-			if (m_expandMTUStatus == ExpandMTUStatus.None)
+			if (_expandMTUStatus == ExpandMTUStatus.None)
 			{
 				if (m_peerConfiguration.m_autoExpandMTU == false)
 				{
@@ -55,17 +53,17 @@ namespace Lidgren.Network
 				return;
 			}
 
-			if (now > m_lastSentMTUAttemptTime + m_peerConfiguration.ExpandMTUFrequency)
+			if (now > _lastSentMTUAttemptTime + m_peerConfiguration.ExpandMTUFrequency)
 			{
-				m_mtuAttemptFails++;
-				if (m_mtuAttemptFails == 3)
+				_mtuAttemptFails++;
+				if (_mtuAttemptFails == 3)
 				{
 					FinalizeMTU(m_currentMTU);
 					return;
 				}
 
 				// timed out; ie. failed
-				m_smallestFailedMTU = m_lastSentMTUAttemptSize;
+				_smallestFailedMTU = _lastSentMTUAttemptSize;
 				ExpandMTU(now);
 			}
 		}
@@ -75,7 +73,7 @@ namespace Lidgren.Network
 			int tryMTU;
 
 			// we've nevered encountered failure
-			if (m_smallestFailedMTU == -1)
+			if (_smallestFailedMTU == -1)
 			{
 				// we've never encountered failure; expand by 25% each time
 				tryMTU = (int)((float)m_currentMTU * 1.25f);
@@ -84,17 +82,17 @@ namespace Lidgren.Network
 			else
 			{
 				// we HAVE encountered failure; so try in between
-				tryMTU = (int)(((float)m_smallestFailedMTU + (float)m_largestSuccessfulMTU) / 2.0f);
+				tryMTU = (int)(((float)_smallestFailedMTU + (float)_largestSuccessfulMTU) / 2.0f);
 				//m_peer.LogDebug("Trying MTU " + m_smallestFailedMTU + " <-> " + m_largestSuccessfulMTU + " = " + tryMTU);
 			}
 
 			if (tryMTU > c_protocolMaxMTU)
 				tryMTU = c_protocolMaxMTU;
 
-			if (tryMTU == m_largestSuccessfulMTU)
+			if (tryMTU == _largestSuccessfulMTU)
 			{
 				//m_peer.LogDebug("Found optimal MTU - exiting");
-				FinalizeMTU(m_largestSuccessfulMTU);
+				FinalizeMTU(_largestSuccessfulMTU);
 				return;
 			}
 
@@ -115,13 +113,13 @@ namespace Lidgren.Network
 				//m_peer.LogDebug("Send MTU failed for size " + size);
 
 				// failure
-				if (m_smallestFailedMTU == -1 || size < m_smallestFailedMTU)
+				if (_smallestFailedMTU == -1 || size < _smallestFailedMTU)
 				{
-					m_smallestFailedMTU = size;
-					m_mtuAttemptFails++;
-					if (m_mtuAttemptFails >= m_peerConfiguration.ExpandMTUFailAttempts)
+					_smallestFailedMTU = size;
+					_mtuAttemptFails++;
+					if (_mtuAttemptFails >= m_peerConfiguration.ExpandMTUFailAttempts)
 					{
-						FinalizeMTU(m_largestSuccessfulMTU);
+						FinalizeMTU(_largestSuccessfulMTU);
 						return;
 					}
 				}
@@ -129,8 +127,8 @@ namespace Lidgren.Network
 				return;
 			}
 
-			m_lastSentMTUAttemptSize = size;
-			m_lastSentMTUAttemptTime = now;
+			_lastSentMTUAttemptSize = size;
+			_lastSentMTUAttemptTime = now;
 
 			m_statistics.PacketSent(len, 1);
 			m_peer.Recycle(om);
@@ -138,9 +136,9 @@ namespace Lidgren.Network
 
 		private void FinalizeMTU(int size)
 		{
-			if (m_expandMTUStatus == ExpandMTUStatus.Finished)
+			if (_expandMTUStatus == ExpandMTUStatus.Finished)
 				return;
-			m_expandMTUStatus = ExpandMTUStatus.Finished;
+			_expandMTUStatus = ExpandMTUStatus.Finished;
 			m_currentMTU = size;
 			if (m_currentMTU != m_peerConfiguration.m_maximumTransmissionUnit)
 				m_peer.LogDebug("Expanded Maximum Transmission Unit to: " + m_currentMTU + " bytes");
@@ -153,9 +151,8 @@ namespace Lidgren.Network
 			om.Write(size);
 			om.m_messageType = NetMessageType.ExpandMTUSuccess;
 			int len = om.Encode(m_peer.m_sendBuffer, 0, 0);
-			bool connectionReset;
-			m_peer.SendPacket(len, m_remoteEndPoint, 1, out connectionReset);
-			m_peer.Recycle(om);
+            m_peer.SendPacket(len, m_remoteEndPoint, 1, out _);
+            m_peer.Recycle(om);
 
 			//m_peer.LogDebug("Received MTU expand request for " + size + " bytes");
 
@@ -164,8 +161,8 @@ namespace Lidgren.Network
 
 		private void HandleExpandMTUSuccess(double now, int size)
 		{
-			if (size > m_largestSuccessfulMTU)
-				m_largestSuccessfulMTU = size;
+			if (size > _largestSuccessfulMTU)
+				_largestSuccessfulMTU = size;
 
 			if (size < m_currentMTU)
 			{

@@ -8,13 +8,13 @@ namespace Lidgren.Network
 	/// </summary>
 	internal sealed class NetReliableSenderChannel : NetSenderChannelBase
 	{
-		private readonly NetConnection m_connection;
-		private int m_windowStart;
-		private int m_sendStart;
+		private readonly NetConnection _connection;
+		private int _windowStart;
+		private int _sendStart;
 
-		private bool m_anyStoredResends;
+		private bool _anyStoredResends;
 
-		private readonly NetBitVector m_receivedAcks;
+		private readonly NetBitVector _receivedAcks;
 		internal NetStoredReliableMessage[] m_storedMessages;
 
 		internal double m_resendDelay;
@@ -23,44 +23,44 @@ namespace Lidgren.Network
 
         internal override bool NeedToSendMessages()
 		{
-			return base.NeedToSendMessages() || m_anyStoredResends;
+			return base.NeedToSendMessages() || _anyStoredResends;
 		}
 
 		internal NetReliableSenderChannel(NetConnection connection, int windowSize)
 		{
-			m_connection = connection;
+			_connection = connection;
             WindowSize = windowSize;
-			m_windowStart = 0;
-			m_sendStart = 0;
-			m_anyStoredResends = false;
-			m_receivedAcks = new NetBitVector(NetConstants.NumSequenceNumbers);
+			_windowStart = 0;
+			_sendStart = 0;
+			_anyStoredResends = false;
+			_receivedAcks = new NetBitVector(NetConstants.NumSequenceNumbers);
 			m_storedMessages = new NetStoredReliableMessage[WindowSize];
 			m_queuedSends = new NetQueue<NetOutgoingMessage>(8);
-			m_resendDelay = m_connection.GetResendDelay();
+			m_resendDelay = _connection.GetResendDelay();
 		}
 
 		internal override int GetAllowedSends()
 		{
-			int retval = WindowSize - ((m_sendStart + NetConstants.NumSequenceNumbers - m_windowStart) % NetConstants.NumSequenceNumbers);
+			int retval = WindowSize - ((_sendStart + NetConstants.NumSequenceNumbers - _windowStart) % NetConstants.NumSequenceNumbers);
 			NetException.Assert(retval >= 0 && retval <= WindowSize);
 			return retval;
 		}
 
 		internal override void Reset()
 		{
-			m_receivedAcks.Clear();
+			_receivedAcks.Clear();
 			for (int i = 0; i < m_storedMessages.Length; i++)
 				m_storedMessages[i].Reset();
-			m_anyStoredResends = false;
+			_anyStoredResends = false;
 			m_queuedSends.Clear();
-			m_windowStart = 0;
-			m_sendStart = 0;
+			_windowStart = 0;
+			_sendStart = 0;
 		}
 
 		internal override NetSendResult Enqueue(NetOutgoingMessage message)
 		{
 			m_queuedSends.Enqueue(message);
-			m_connection.m_peer.m_needFlushSendQueue = true; // a race condition to this variable will simply result in a single superflous call to FlushSendQueue()
+			_connection.m_peer.m_needFlushSendQueue = true; // a race condition to this variable will simply result in a single superflous call to FlushSendQueue()
 			if (m_queuedSends.Count <= GetAllowedSends())
 				return NetSendResult.Sent;
 			return NetSendResult.Queued;
@@ -72,7 +72,7 @@ namespace Lidgren.Network
 			//
 			// resends
 			//
-			m_anyStoredResends = false;
+			_anyStoredResends = false;
 			for (int i = 0; i < m_storedMessages.Length; i++)
 			{
 				var storedMsg = m_storedMessages[i];
@@ -80,7 +80,7 @@ namespace Lidgren.Network
 				if (om == null)
 					continue;
 
-				m_anyStoredResends = true;
+				_anyStoredResends = true;
 
 				double t = storedMsg.LastSent;
 				if (t > 0 && (now - t) > m_resendDelay)
@@ -99,10 +99,10 @@ namespace Lidgren.Network
 					*/
 
 					//m_connection.m_peer.LogVerbose("Resending due to delay #" + m_storedMessages[i].SequenceNumber + " " + om.ToString());
-					m_connection.m_statistics.MessageResent(MessageResendReason.Delay);
+					_connection.m_statistics.MessageResent(MessageResendReason.Delay);
 
 					Interlocked.Increment(ref om.m_recyclingCount); // increment this since it's being decremented in QueueSendMessage
-					m_connection.QueueSendMessage(om, storedMsg.SequenceNumber);
+					_connection.QueueSendMessage(om, storedMsg.SequenceNumber);
 
 					m_storedMessages[i].LastSent = now;
 					m_storedMessages[i].NumSent++;
@@ -125,14 +125,14 @@ namespace Lidgren.Network
 
 		private void ExecuteSend(double now, NetOutgoingMessage message)
 		{
-			int seqNr = m_sendStart;
-			m_sendStart = (m_sendStart + 1) % NetConstants.NumSequenceNumbers;
+			int seqNr = _sendStart;
+			_sendStart = (_sendStart + 1) % NetConstants.NumSequenceNumbers;
 
 			// must increment recycle count here, since it's decremented in QueueSendMessage and we want to keep it for the future in case or resends
 			// we will decrement once more in DestoreMessage for final recycling
 			Interlocked.Increment(ref message.m_recyclingCount);
 
-			m_connection.QueueSendMessage(message, seqNr);
+			_connection.QueueSendMessage(message, seqNr);
 
 			int storeIndex = seqNr % WindowSize;
 			NetException.Assert(m_storedMessages[storeIndex].Message == null);
@@ -141,7 +141,7 @@ namespace Lidgren.Network
 			m_storedMessages[storeIndex].Message = message;
 			m_storedMessages[storeIndex].LastSent = now;
 			m_storedMessages[storeIndex].SequenceNumber = seqNr;
-			m_anyStoredResends = true;
+			_anyStoredResends = true;
 
 			return;
 		}
@@ -165,7 +165,7 @@ namespace Lidgren.Network
 			{
 #endif
 			if (storedMessage.m_recyclingCount <= 0)
-				m_connection.m_peer.Recycle(storedMessage);
+				_connection.m_peer.Recycle(storedMessage);
 
 #if !DEBUG
 			}
@@ -178,7 +178,7 @@ namespace Lidgren.Network
 		internal override void ReceiveAcknowledge(double now, int seqNr)
 		{
 			// late (dupe), on time or early ack?
-			int relate = NetUtility.RelativeSequenceNumber(seqNr, m_windowStart);
+			int relate = NetUtility.RelativeSequenceNumber(seqNr, _windowStart);
 
 			if (relate < 0)
 			{
@@ -191,26 +191,26 @@ namespace Lidgren.Network
 				//m_connection.m_peer.LogDebug("Received right-on-time ack for #" + seqNr);
 
 				// ack arrived right on time
-				NetException.Assert(seqNr == m_windowStart);
+				NetException.Assert(seqNr == _windowStart);
 
-                m_receivedAcks[m_windowStart] = false;
-                DestoreMessage(now, m_windowStart % WindowSize, out bool resetTimeout);
-				m_windowStart = (m_windowStart + 1) % NetConstants.NumSequenceNumbers;
+                _receivedAcks[_windowStart] = false;
+                DestoreMessage(now, _windowStart % WindowSize, out bool resetTimeout);
+				_windowStart = (_windowStart + 1) % NetConstants.NumSequenceNumbers;
 
 				// advance window if we already have early acks
-				while (m_receivedAcks.Get(m_windowStart))
+				while (_receivedAcks.Get(_windowStart))
 				{
 					//m_connection.m_peer.LogDebug("Using early ack for #" + m_windowStart + "...");
-					m_receivedAcks[m_windowStart] = false;
-                    DestoreMessage(now, m_windowStart % WindowSize, out bool rt);
+					_receivedAcks[_windowStart] = false;
+                    DestoreMessage(now, _windowStart % WindowSize, out bool rt);
                     resetTimeout |= rt;
 
-					NetException.Assert(m_storedMessages[m_windowStart % WindowSize].Message == null); // should already be destored
-					m_windowStart = (m_windowStart + 1) % NetConstants.NumSequenceNumbers;
+					NetException.Assert(m_storedMessages[_windowStart % WindowSize].Message == null); // should already be destored
+					_windowStart = (_windowStart + 1) % NetConstants.NumSequenceNumbers;
 					//m_connection.m_peer.LogDebug("Advancing window to #" + m_windowStart);
 				}
 				if (resetTimeout)
-					m_connection.ResetTimeout(now);
+					_connection.ResetTimeout(now);
 				return;
 			}
 
@@ -223,17 +223,17 @@ namespace Lidgren.Network
 
 			//m_connection.m_peer.LogDebug("Received early ack for #" + seqNr);
 
-			int sendRelate = NetUtility.RelativeSequenceNumber(seqNr, m_sendStart);
+			int sendRelate = NetUtility.RelativeSequenceNumber(seqNr, _sendStart);
 			if (sendRelate <= 0)
 			{
 				// yes, we've sent this message - it's an early (but valid) ack
-				if (m_receivedAcks[seqNr])
+				if (_receivedAcks[seqNr])
 				{
 					// we've already destored/been acked for this message
 				}
 				else
 				{
-					m_receivedAcks[seqNr] = true;
+					_receivedAcks[seqNr] = true;
 				}
 			}
 			else if (sendRelate > 0)
@@ -251,7 +251,7 @@ namespace Lidgren.Network
 				if (rnr < 0)
 					rnr = NetConstants.NumSequenceNumbers - 1;
 
-				if (m_receivedAcks[rnr])
+				if (_receivedAcks[rnr])
 				{
 					// m_connection.m_peer.LogDebug("Not resending #" + rnr + " (since we got ack)");
 				}
@@ -273,14 +273,14 @@ namespace Lidgren.Network
 						{
 							m_storedMessages[slot].LastSent = now;
 							m_storedMessages[slot].NumSent++;
-							m_connection.m_statistics.MessageResent(MessageResendReason.HoleInSequence);
+							_connection.m_statistics.MessageResent(MessageResendReason.HoleInSequence);
 							Interlocked.Increment(ref rmsg.m_recyclingCount); // increment this since it's being decremented in QueueSendMessage
-							m_connection.QueueSendMessage(rmsg, rnr);
+							_connection.QueueSendMessage(rmsg, rnr);
 						}
 					}
 				}
 
-			} while (rnr != m_windowStart);
+			} while (rnr != _windowStart);
 		}
 	}
 }

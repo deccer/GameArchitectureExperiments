@@ -243,7 +243,7 @@ namespace Lidgren.Network
 			im.m_isFragment = false;
 			im.m_receiveTime = NetTime.Now;
 			im.m_senderConnection = null;
-			im.m_senderEndPoint = m_socket.LocalEndPoint as NetEndPoint;
+			im.m_senderEndPoint = _socket.LocalEndPoint as NetEndPoint;
 			NetException.Assert(im.m_bitLength == om.LengthBits);
 
 			// recycle outgoing message

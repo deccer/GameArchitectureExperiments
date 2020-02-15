@@ -1,15 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Lidgren.Network
 {
-	/// <summary>
-	/// Base for a non-threadsafe encryption class
-	/// </summary>
-	public abstract class NetBlockEncryptionBase : NetEncryption
+    /// <summary>
+    /// Base for a non-threadsafe encryption class
+    /// </summary>
+    public abstract class NetBlockEncryptionBase : NetEncryption
 	{
 		// temporary space for one block to avoid reallocating every time
-		private readonly byte[] m_tmp;
+		private readonly byte[] _tmp;
 
 		/// <summary>
 		/// Block size in bytes for this cipher
@@ -22,7 +21,7 @@ namespace Lidgren.Network
 		protected NetBlockEncryptionBase(NetPeer peer)
 			: base(peer)
 		{
-			m_tmp = new byte[BlockSize];
+			_tmp = new byte[BlockSize];
 		}
 
 		/// <summary>
@@ -41,8 +40,8 @@ namespace Lidgren.Network
 
 			for(int i=0;i<numBlocks;i++)
 			{
-				EncryptBlock(msg.m_data, i * blockSize, m_tmp);
-				Buffer.BlockCopy(m_tmp, 0, msg.m_data, i * blockSize, m_tmp.Length);
+				EncryptBlock(msg.m_data, i * blockSize, _tmp);
+				Buffer.BlockCopy(_tmp, 0, msg.m_data, i * blockSize, _tmp.Length);
 			}
 
 			// add true payload length last
@@ -66,8 +65,8 @@ namespace Lidgren.Network
 
 			for (int i = 0; i < numBlocks; i++)
 			{
-				DecryptBlock(msg.m_data, i * blockSize, m_tmp);
-				Buffer.BlockCopy(m_tmp, 0, msg.m_data, i * blockSize, m_tmp.Length);
+				DecryptBlock(msg.m_data, i * blockSize, _tmp);
+				Buffer.BlockCopy(_tmp, 0, msg.m_data, i * blockSize, _tmp.Length);
 			}
 
 			// read 32 bits of true payload length

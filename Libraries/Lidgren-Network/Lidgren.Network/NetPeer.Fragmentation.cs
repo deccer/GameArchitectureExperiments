@@ -13,20 +13,20 @@ namespace Lidgren.Network
 
 	public partial class NetPeer
 	{
-		private int m_lastUsedFragmentGroup;
+		private int _lastUsedFragmentGroup;
 
-		private readonly Dictionary<NetConnection, Dictionary<int, ReceivedFragmentGroup>> m_receivedFragmentGroups;
+		private readonly Dictionary<NetConnection, Dictionary<int, ReceivedFragmentGroup>> _receivedFragmentGroups;
 
 		// on user thread
 		private NetSendResult SendFragmentedMessage(NetOutgoingMessage msg, IList<NetConnection> recipients, NetDeliveryMethod method, int sequenceChannel)
 		{
 			// Note: this group id is PER SENDING/NetPeer; ie. same id is sent to all recipients;
 			// this should be ok however; as long as recipients differentiate between same id but different sender
-			int group = Interlocked.Increment(ref m_lastUsedFragmentGroup);
+			int group = Interlocked.Increment(ref _lastUsedFragmentGroup);
 			if (group >= NetConstants.MaxFragmentationGroups)
 			{
 				// @TODO: not thread safe; but in practice probably not an issue
-				m_lastUsedFragmentGroup = 1;
+				_lastUsedFragmentGroup = 1;
 				group = 1;
 			}
 			msg.m_fragmentGroup = group;
@@ -113,10 +113,10 @@ namespace Lidgren.Network
 				return;
 			}
 
-            if (!m_receivedFragmentGroups.TryGetValue(im.SenderConnection, out Dictionary<int, ReceivedFragmentGroup> groups))
+            if (!_receivedFragmentGroups.TryGetValue(im.SenderConnection, out Dictionary<int, ReceivedFragmentGroup> groups))
             {
                 groups = new Dictionary<int, ReceivedFragmentGroup>();
-                m_receivedFragmentGroups[im.SenderConnection] = groups;
+                _receivedFragmentGroups[im.SenderConnection] = groups;
             }
 
             if (!groups.TryGetValue(group, out ReceivedFragmentGroup info))

@@ -30,9 +30,9 @@ namespace Lidgren.Network
 		internal long m_remoteUniqueIdentifier;
 		internal NetQueue<NetTuple<NetMessageType, int>> m_queuedOutgoingAcks;
 		internal NetQueue<NetTuple<NetMessageType, int>> m_queuedIncomingAcks;
-		private int m_sendBufferWritePtr;
-		private int m_sendBufferNumMessages;
-		private object m_tag;
+		private int _sendBufferWritePtr;
+		private int _sendBufferNumMessages;
+		private object _tag;
 		internal NetConnectionStatistics m_statistics;
 
 		/// <summary>
@@ -40,8 +40,8 @@ namespace Lidgren.Network
 		/// </summary>
 		public object Tag
 		{
-			get { return m_tag; }
-			set { m_tag = value; }
+			get { return _tag; }
+			set { _tag = value; }
 		}
 
 		/// <summary>
@@ -77,7 +77,7 @@ namespace Lidgren.Network
 		// gets the time before automatically resending an unacked message
 		internal double GetResendDelay()
 		{
-			double avgRtt = m_averageRoundtripTime;
+			double avgRtt = _averageRoundtripTime;
 			if (avgRtt <= 0)
 				avgRtt = 0.1; // "default" resend is based on 100 ms roundtrip time
 			return 0.025 + (avgRtt * 2.1); // 25 ms + double rtt
@@ -96,7 +96,7 @@ namespace Lidgren.Network
 			m_queuedOutgoingAcks = new NetQueue<NetTuple<NetMessageType, int>>(4);
 			m_queuedIncomingAcks = new NetQueue<NetTuple<NetMessageType, int>>(4);
 			m_statistics = new NetConnectionStatistics(this);
-			m_averageRoundtripTime = -1.0f;
+			_averageRoundtripTime = -1.0f;
 			m_currentMTU = m_peerConfiguration.MaximumTransmissionUnit;
 		}
 
@@ -110,7 +110,7 @@ namespace Lidgren.Network
 
 		internal void ResetTimeout(double now)
 		{
-			m_timeoutDeadline = now + m_peerConfiguration.m_connectionTimeout;
+			_timeoutDeadline = now + m_peerConfiguration.m_connectionTimeout;
 		}
 
 		internal void SetStatus(NetConnectionStatus status, string reason)
@@ -123,8 +123,8 @@ namespace Lidgren.Network
 
 			if (m_status == NetConnectionStatus.Connected)
 			{
-				m_timeoutDeadline = NetTime.Now + m_peerConfiguration.m_connectionTimeout;
-				m_peer.LogVerbose("Timeout deadline initialized to  " + m_timeoutDeadline);
+				_timeoutDeadline = NetTime.Now + m_peerConfiguration.m_connectionTimeout;
+				m_peer.LogVerbose("Timeout deadline initialized to  " + _timeoutDeadline);
 			}
 
 			if (m_peerConfiguration.IsMessageTypeEnabled(NetIncomingMessageType.StatusChanged))
@@ -156,12 +156,12 @@ namespace Lidgren.Network
 
 			if ((frameCounter % m_infrequentEventsSkipFrames) == 0)
 			{
-				if (now > m_timeoutDeadline)
+				if (now > _timeoutDeadline)
 				{
 					//
 					// connection timed out
 					//
-					m_peer.LogVerbose("Connection timed out at " + now + " deadline was " + m_timeoutDeadline);
+					m_peer.LogVerbose("Connection timed out at " + now + " deadline was " + _timeoutDeadline);
 					ExecuteDisconnect("Connection timed out", true);
 					return;
 				}
@@ -169,7 +169,7 @@ namespace Lidgren.Network
 				// send ping?
 				if (m_status == NetConnectionStatus.Connected)
 				{
-					if (now > m_sentPingTime + m_peer.m_configuration.m_pingInterval)
+					if (now > _sentPingTime + m_peer.m_configuration.m_pingInterval)
 						SendPing();
 
 					// handle expand mtu
@@ -197,21 +197,21 @@ namespace Lidgren.Network
 				//
 				while (m_queuedOutgoingAcks.Count > 0)
 				{
-					int acks = (mtu - (m_sendBufferWritePtr + 5)) / 3; // 3 bytes per actual ack
+					int acks = (mtu - (_sendBufferWritePtr + 5)) / 3; // 3 bytes per actual ack
 					if (acks > m_queuedOutgoingAcks.Count)
 						acks = m_queuedOutgoingAcks.Count;
 
 					NetException.Assert(acks > 0);
 
-					m_sendBufferNumMessages++;
+					_sendBufferNumMessages++;
 
 					// write acks header
-					sendBuffer[m_sendBufferWritePtr++] = (byte)NetMessageType.Acknowledge;
-					sendBuffer[m_sendBufferWritePtr++] = 0; // no sequence number
-					sendBuffer[m_sendBufferWritePtr++] = 0; // no sequence number
+					sendBuffer[_sendBufferWritePtr++] = (byte)NetMessageType.Acknowledge;
+					sendBuffer[_sendBufferWritePtr++] = 0; // no sequence number
+					sendBuffer[_sendBufferWritePtr++] = 0; // no sequence number
 					int len = acks * 3 * 8; // bits
-					sendBuffer[m_sendBufferWritePtr++] = (byte)len;
-					sendBuffer[m_sendBufferWritePtr++] = (byte)(len >> 8);
+					sendBuffer[_sendBufferWritePtr++] = (byte)len;
+					sendBuffer[_sendBufferWritePtr++] = (byte)(len >> 8);
 
 					// write acks
 					for (int i = 0; i < acks; i++)
@@ -220,19 +220,19 @@ namespace Lidgren.Network
 
                         //m_peer.LogVerbose("Sending ack for " + tuple.Item1 + "#" + tuple.Item2);
 
-                        sendBuffer[m_sendBufferWritePtr++] = (byte)tuple.Item1;
-						sendBuffer[m_sendBufferWritePtr++] = (byte)tuple.Item2;
-						sendBuffer[m_sendBufferWritePtr++] = (byte)(tuple.Item2 >> 8);
+                        sendBuffer[_sendBufferWritePtr++] = (byte)tuple.Item1;
+						sendBuffer[_sendBufferWritePtr++] = (byte)tuple.Item2;
+						sendBuffer[_sendBufferWritePtr++] = (byte)(tuple.Item2 >> 8);
 					}
 
 					if (m_queuedOutgoingAcks.Count > 0)
 					{
 						// send packet and go for another round of acks
-						NetException.Assert(m_sendBufferWritePtr > 0 && m_sendBufferNumMessages > 0);
-						m_peer.SendPacket(m_sendBufferWritePtr, m_remoteEndPoint, m_sendBufferNumMessages, out _);
-						m_statistics.PacketSent(m_sendBufferWritePtr, 1);
-						m_sendBufferWritePtr = 0;
-						m_sendBufferNumMessages = 0;
+						NetException.Assert(_sendBufferWritePtr > 0 && _sendBufferNumMessages > 0);
+						m_peer.SendPacket(_sendBufferWritePtr, m_remoteEndPoint, _sendBufferNumMessages, out _);
+						m_statistics.PacketSent(_sendBufferWritePtr, 1);
+						_sendBufferWritePtr = 0;
+						_sendBufferNumMessages = 0;
 					}
 				}
 
@@ -260,28 +260,28 @@ namespace Lidgren.Network
 				for (int i = m_sendChannels.Length - 1; i >= 0; i--)    // Reverse order so reliable messages are sent first
 				{
 					var channel = m_sendChannels[i];
-					NetException.Assert(m_sendBufferWritePtr < 1 || m_sendBufferNumMessages > 0);
+					NetException.Assert(_sendBufferWritePtr < 1 || _sendBufferNumMessages > 0);
 					if (channel != null)
 					{
 						channel.SendQueuedMessages(now);
 						if (channel.NeedToSendMessages())
 							m_peer.m_needFlushSendQueue = true; // failed to send all queued sends; likely a full window - need to try again
 					}
-					NetException.Assert(m_sendBufferWritePtr < 1 || m_sendBufferNumMessages > 0);
+					NetException.Assert(_sendBufferWritePtr < 1 || _sendBufferNumMessages > 0);
 				}
 			}
 
 			//
 			// Put on wire data has been written to send buffer but not yet sent
 			//
-			if (m_sendBufferWritePtr > 0)
+			if (_sendBufferWritePtr > 0)
 			{
 				m_peer.VerifyNetworkThread();
-				NetException.Assert(m_sendBufferWritePtr > 0 && m_sendBufferNumMessages > 0);
-				m_peer.SendPacket(m_sendBufferWritePtr, m_remoteEndPoint, m_sendBufferNumMessages, out _);
-				m_statistics.PacketSent(m_sendBufferWritePtr, m_sendBufferNumMessages);
-				m_sendBufferWritePtr = 0;
-				m_sendBufferNumMessages = 0;
+				NetException.Assert(_sendBufferWritePtr > 0 && _sendBufferNumMessages > 0);
+				m_peer.SendPacket(_sendBufferWritePtr, m_remoteEndPoint, _sendBufferNumMessages, out _);
+				m_statistics.PacketSent(_sendBufferWritePtr, _sendBufferNumMessages);
+				_sendBufferWritePtr = 0;
+				_sendBufferNumMessages = 0;
 			}
 		}
 
@@ -296,29 +296,29 @@ namespace Lidgren.Network
             //	m_peer.LogWarning("Message larger than MTU! Fragmentation must have failed!");
 
             // can fit this message together with previously written to buffer?
-            if (m_sendBufferWritePtr + sz > m_currentMTU && m_sendBufferWritePtr > 0 && m_sendBufferNumMessages > 0)
+            if (_sendBufferWritePtr + sz > m_currentMTU && _sendBufferWritePtr > 0 && _sendBufferNumMessages > 0)
             {
                 // previous message in buffer; send these first
-                m_peer.SendPacket(m_sendBufferWritePtr, m_remoteEndPoint, m_sendBufferNumMessages, out _);
-                m_statistics.PacketSent(m_sendBufferWritePtr, m_sendBufferNumMessages);
-                m_sendBufferWritePtr = 0;
-                m_sendBufferNumMessages = 0;
+                m_peer.SendPacket(_sendBufferWritePtr, m_remoteEndPoint, _sendBufferNumMessages, out _);
+                m_statistics.PacketSent(_sendBufferWritePtr, _sendBufferNumMessages);
+                _sendBufferWritePtr = 0;
+                _sendBufferNumMessages = 0;
             }
 
             // encode it into buffer regardless if it (now) fits within MTU or not
-            m_sendBufferWritePtr = om.Encode(m_peer.m_sendBuffer, m_sendBufferWritePtr, seqNr);
-			m_sendBufferNumMessages++;
+            _sendBufferWritePtr = om.Encode(m_peer.m_sendBuffer, _sendBufferWritePtr, seqNr);
+			_sendBufferNumMessages++;
 
-			if (m_sendBufferWritePtr > m_currentMTU)
+			if (_sendBufferWritePtr > m_currentMTU)
 			{
 				// send immediately; we're already over MTU
-				m_peer.SendPacket(m_sendBufferWritePtr, m_remoteEndPoint, m_sendBufferNumMessages, out _);
-				m_statistics.PacketSent(m_sendBufferWritePtr, m_sendBufferNumMessages);
-				m_sendBufferWritePtr = 0;
-				m_sendBufferNumMessages = 0;
+				m_peer.SendPacket(_sendBufferWritePtr, m_remoteEndPoint, _sendBufferNumMessages, out _);
+				m_statistics.PacketSent(_sendBufferWritePtr, _sendBufferNumMessages);
+				_sendBufferWritePtr = 0;
+				_sendBufferNumMessages = 0;
 			}
 
-			if (m_sendBufferWritePtr > 0)
+			if (_sendBufferWritePtr > 0)
 				m_peer.m_needFlushSendQueue = true; // flush in heartbeat
 
 			Interlocked.Decrement(ref om.m_recyclingCount);

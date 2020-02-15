@@ -17,28 +17,26 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR TH
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 using System;
-using System.Security.Cryptography;
 using System.Text;
-using System.Security;
 
 namespace Lidgren.Network
 {
-	/// <summary>
-	/// Methods to encrypt and decrypt data using the XTEA algorithm
-	/// </summary>
-	public sealed class NetXtea : NetBlockEncryptionBase
+    /// <summary>
+    /// Methods to encrypt and decrypt data using the XTEA algorithm
+    /// </summary>
+    public sealed class NetXtea : NetBlockEncryptionBase
 	{
-		private const int c_blockSize = 8;
-		private const int c_keySize = 16;
+		private const int DefaultBlockSize = 8;
+		private const int DefaultKeySize = 16;
 
-		private readonly int m_numRounds;
-		private readonly uint[] m_sum0;
-		private readonly uint[] m_sum1;
+		private readonly int _numRounds;
+		private readonly uint[] _sum0;
+		private readonly uint[] _sum1;
 
 		/// <summary>
 		/// Gets the block size for this cipher
 		/// </summary>
-		public override int BlockSize { get { return c_blockSize; } }
+		public override int BlockSize { get { return BlockSize; } }
 
 		/// <summary>
 		/// 16 byte key
@@ -46,12 +44,12 @@ namespace Lidgren.Network
 		public NetXtea(NetPeer peer, byte[] key, int rounds)
 			: base(peer)
 		{
-			if (key.Length < c_keySize)
+			if (key.Length < DefaultKeySize)
 				throw new NetException("Key too short!");
 
-			m_numRounds = rounds;
-			m_sum0 = new uint[m_numRounds];
-			m_sum1 = new uint[m_numRounds];
+			_numRounds = rounds;
+			_sum0 = new uint[_numRounds];
+			_sum1 = new uint[_numRounds];
 			uint[] tmp = new uint[8];
 
 			int num2;
@@ -64,9 +62,9 @@ namespace Lidgren.Network
 			}
 			for (index = num2 = 0; index < 32; index++)
 			{
-				m_sum0[index] = ((uint)num2) + tmp[num2 & 3];
+				_sum0[index] = ((uint)num2) + tmp[num2 & 3];
 				num2 += -1640531527;
-				m_sum1[index] = ((uint)num2) + tmp[(num2 >> 11) & 3];
+				_sum1[index] = ((uint)num2) + tmp[(num2 >> 11) & 3];
 			}
 		}
 
@@ -101,10 +99,10 @@ namespace Lidgren.Network
 			uint v0 = BytesToUInt(source, sourceOffset);
 			uint v1 = BytesToUInt(source, sourceOffset + 4);
 
-			for (int i = 0; i != m_numRounds; i++)
+			for (int i = 0; i != _numRounds; i++)
 			{
-				v0 += (((v1 << 4) ^ (v1 >> 5)) + v1) ^ m_sum0[i];
-				v1 += (((v0 << 4) ^ (v0 >> 5)) + v0) ^ m_sum1[i];
+				v0 += (((v1 << 4) ^ (v1 >> 5)) + v1) ^ _sum0[i];
+				v1 += (((v0 << 4) ^ (v0 >> 5)) + v0) ^ _sum1[i];
 			}
 
 			UIntToBytes(v0, destination, 0);
@@ -122,10 +120,10 @@ namespace Lidgren.Network
 			uint v0 = BytesToUInt(source, sourceOffset);
 			uint v1 = BytesToUInt(source, sourceOffset + 4);
 
-			for (int i = m_numRounds - 1; i >= 0; i--)
+			for (int i = _numRounds - 1; i >= 0; i--)
 			{
-				v1 -= (((v0 << 4) ^ (v0 >> 5)) + v0) ^ m_sum1[i];
-				v0 -= (((v1 << 4) ^ (v1 >> 5)) + v1) ^ m_sum0[i];
+				v1 -= (((v0 << 4) ^ (v0 >> 5)) + v0) ^ _sum1[i];
+				v0 -= (((v1 << 4) ^ (v1 >> 5)) + v1) ^ _sum0[i];
 			}
 
 			UIntToBytes(v0, destination, 0);

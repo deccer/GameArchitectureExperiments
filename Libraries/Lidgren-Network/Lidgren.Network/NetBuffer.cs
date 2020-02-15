@@ -11,8 +11,8 @@ namespace Lidgren.Network
         /// </summary>
         protected const int c_overAllocateAmount = 4;
 
-        private static readonly Dictionary<Type, MethodInfo> s_readMethods;
-        private static readonly Dictionary<Type, MethodInfo> s_writeMethods;
+        private static readonly Dictionary<Type, MethodInfo> _readMethods;
+        private static readonly Dictionary<Type, MethodInfo> _writeMethods;
 
         internal byte[] m_data;
         internal int m_bitLength;
@@ -72,17 +72,17 @@ namespace Lidgren.Network
 
         static NetBuffer()
         {
-            s_readMethods = new Dictionary<Type, MethodInfo>();
+            _readMethods = new Dictionary<Type, MethodInfo>();
             MethodInfo[] methods = typeof(NetIncomingMessage).GetMethods(BindingFlags.Instance | BindingFlags.Public);
             foreach (MethodInfo mi in methods)
             {
                 if (mi.GetParameters().Length == 0 && mi.Name.StartsWith("Read", StringComparison.InvariantCulture) && mi.Name.Substring(4) == mi.ReturnType.Name)
                 {
-                    s_readMethods[mi.ReturnType] = mi;
+                    _readMethods[mi.ReturnType] = mi;
                 }
             }
 
-            s_writeMethods = new Dictionary<Type, MethodInfo>();
+            _writeMethods = new Dictionary<Type, MethodInfo>();
             methods = typeof(NetOutgoingMessage).GetMethods(BindingFlags.Instance | BindingFlags.Public);
             foreach (MethodInfo mi in methods)
             {
@@ -90,7 +90,7 @@ namespace Lidgren.Network
                 {
                     ParameterInfo[] pis = mi.GetParameters();
                     if (pis.Length == 1)
-                        s_writeMethods[pis[0].ParameterType] = mi;
+                        _writeMethods[pis[0].ParameterType] = mi;
                 }
             }
         }

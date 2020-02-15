@@ -227,7 +227,7 @@ namespace Lidgren.Network
 		/// </summary>
 		public static new readonly CryptoRandom Instance = new CryptoRandom();
 
-		private readonly RandomNumberGenerator m_rnd = new RNGCryptoServiceProvider();
+		private readonly RandomNumberGenerator _rnd = new RNGCryptoServiceProvider();
 
 		/// <summary>
 		/// Seed in CryptoRandom does not create deterministic sequences
@@ -235,7 +235,7 @@ namespace Lidgren.Network
 		public override void Initialize(uint seed)
 		{
 			byte[] tmp = new byte[seed % 16];
-			m_rnd.GetBytes(tmp); // just prime it
+			_rnd.GetBytes(tmp); // just prime it
 		}
 
 		/// <summary>
@@ -244,7 +244,7 @@ namespace Lidgren.Network
 		public override uint NextUInt32()
 		{
 			var bytes = new byte[4];
-			m_rnd.GetBytes(bytes);
+			_rnd.GetBytes(bytes);
 			return (uint)bytes[0] | (((uint)bytes[1]) << 8) | (((uint)bytes[2]) << 16) | (((uint)bytes[3]) << 24);
 		}
 
@@ -253,7 +253,7 @@ namespace Lidgren.Network
 		/// </summary>
 		public override void NextBytes(byte[] buffer)
 		{
-			m_rnd.GetBytes(buffer);
+			_rnd.GetBytes(buffer);
 		}
 
 		/// <summary>
@@ -262,7 +262,7 @@ namespace Lidgren.Network
 		public override void NextBytes(byte[] buffer, int offset, int length)
 		{
 			var bytes = new byte[length];
-			m_rnd.GetBytes(bytes);
+			_rnd.GetBytes(bytes);
 			Array.Copy(bytes, 0, buffer, offset, length);
 		}
 	}

@@ -14,21 +14,18 @@ namespace Lidgren.Network
 	/// </summary>
 	public partial class NetPeer
 	{
-		private static int s_initializedPeersCount;
-
-		private int m_listenPort;
-		private object m_tag;
-		private readonly object m_messageReceivedEventCreationLock = new object();
+		private static int _initializedPeersCount;
+        private readonly object _messageReceivedEventCreationLock = new object();
 
 		internal readonly List<NetConnection> m_connections;
-		private readonly Dictionary<NetEndPoint, NetConnection> m_connectionLookup;
+		private readonly Dictionary<NetEndPoint, NetConnection> _connectionLookup;
 
-		private string m_shutdownReason;
+		private string _shutdownReason;
 
 		/// <summary>
 		/// Gets the NetPeerStatus of the NetPeer
 		/// </summary>
-		public NetPeerStatus Status { get { return m_status; } }
+		public NetPeerStatus Status { get { return _status; } }
 
 		/// <summary>
 		/// Signalling event which can be waited on to determine when a message is queued for reading.
@@ -40,15 +37,15 @@ namespace Lidgren.Network
 		{
 			get
 			{
-				if (m_messageReceivedEvent == null)
+				if (_messageReceivedEvent == null)
 				{
-					lock (m_messageReceivedEventCreationLock) // make sure we don't create more than one event object
+					lock (_messageReceivedEventCreationLock) // make sure we don't create more than one event object
 					{
-						if (m_messageReceivedEvent == null)
-							m_messageReceivedEvent = new AutoResetEvent(false);
+						if (_messageReceivedEvent == null)
+							_messageReceivedEvent = new AutoResetEvent(false);
 					}
 				}
-				return m_messageReceivedEvent;
+				return _messageReceivedEvent;
 			}
 		}
 
@@ -57,29 +54,25 @@ namespace Lidgren.Network
 		/// </summary>
 		public long UniqueIdentifier { get { return m_uniqueIdentifier; } }
 
-		/// <summary>
-		/// Gets the port number this NetPeer is listening and sending on, if Start() has been called
-		/// </summary>
-		public int Port { get { return m_listenPort; } }
+        /// <summary>
+        /// Gets the port number this NetPeer is listening and sending on, if Start() has been called
+        /// </summary>
+        public int Port { get; private set; }
 
-		/// <summary>
-		/// Returns an UPnP object if enabled in the NetPeerConfiguration
-		/// </summary>
-		public NetUPnP UPnP { get { return m_upnp; } }
+        /// <summary>
+        /// Returns an UPnP object if enabled in the NetPeerConfiguration
+        /// </summary>
+        public NetUPnP UPnP { get { return _upnp; } }
 
-		/// <summary>
-		/// Gets or sets the application defined object containing data about the peer
-		/// </summary>
-		public object Tag
-		{
-			get { return m_tag; }
-			set { m_tag = value; }
-		}
+        /// <summary>
+        /// Gets or sets the application defined object containing data about the peer
+        /// </summary>
+        public object Tag { get; set; }
 
-		/// <summary>
-		/// Gets a copy of the list of connections
-		/// </summary>
-		public List<NetConnection> Connections
+        /// <summary>
+        /// Gets a copy of the list of connections
+        /// </summary>
+        public List<NetConnection> Connections
 		{
 			get
 			{
@@ -116,15 +109,15 @@ namespace Lidgren.Network
 		{
 			m_configuration = config;
 			m_statistics = new NetPeerStatistics(this);
-			m_releasedIncomingMessages = new NetQueue<NetIncomingMessage>(4);
+			_releasedIncomingMessages = new NetQueue<NetIncomingMessage>(4);
 			m_unsentUnconnectedMessages = new NetQueue<NetTuple<NetEndPoint, NetOutgoingMessage>>(2);
 			m_connections = new List<NetConnection>();
-			m_connectionLookup = new Dictionary<NetEndPoint, NetConnection>();
+			_connectionLookup = new Dictionary<NetEndPoint, NetConnection>();
 			m_handshakes = new Dictionary<NetEndPoint, NetConnection>();
             var address = config.DualStack ? IPAddress.IPv6Any : IPAddress.Any;
-            m_senderRemote = (EndPoint)new NetEndPoint(address, 0);
-			m_status = NetPeerStatus.NotRunning;
-			m_receivedFragmentGroups = new Dictionary<NetConnection, Dictionary<int, ReceivedFragmentGroup>>();
+            _senderRemote = (EndPoint)new NetEndPoint(address, 0);
+			_status = NetPeerStatus.NotRunning;
+			_receivedFragmentGroups = new Dictionary<NetConnection, Dictionary<int, ReceivedFragmentGroup>>();
 		}
 
 		/// <summary>
@@ -132,34 +125,34 @@ namespace Lidgren.Network
 		/// </summary>
 		public void Start()
 		{
-			if (m_status != NetPeerStatus.NotRunning)
+			if (_status != NetPeerStatus.NotRunning)
 			{
 				// already running! Just ignore...
 				LogWarning("Start() called on already running NetPeer - ignoring.");
 				return;
 			}
 
-			m_status = NetPeerStatus.Starting;
+			_status = NetPeerStatus.Starting;
 
 			// fix network thread name
 			if (m_configuration.NetworkThreadName == "Lidgren network thread")
 			{
-				int pc = Interlocked.Increment(ref s_initializedPeersCount);
+				int pc = Interlocked.Increment(ref _initializedPeersCount);
 				m_configuration.NetworkThreadName = "Lidgren network thread " + pc.ToString();
 			}
 
 			InitializeNetwork();
 
             // start network thread
-            m_networkThread = new Thread(new ThreadStart(NetworkLoop))
+            _networkThread = new Thread(new ThreadStart(NetworkLoop))
             {
                 Name = m_configuration.NetworkThreadName,
                 IsBackground = true
             };
-            m_networkThread.Start();
+            _networkThread.Start();
 
 			// send upnp discovery
-			m_upnp?.Discover(this);
+			_upnp?.Discover(this);
 
 			// allow some time for network thread to start up in case they call Connect() or UPnP calls immediately
 			NetUtility.Sleep(50);
@@ -172,7 +165,7 @@ namespace Lidgren.Network
 		{
             // this should not pose a threading problem, m_connectionLookup is never added to concurrently
             // and TryGetValue will not throw an exception on fail, only yield null, which is acceptable
-            m_connectionLookup.TryGetValue(ep, out NetConnection retval);
+            _connectionLookup.TryGetValue(ep, out NetConnection retval);
 
             return retval;
 		}
@@ -204,7 +197,7 @@ namespace Lidgren.Network
 		/// </summary>
 		public NetIncomingMessage ReadMessage()
 		{
-            if (m_releasedIncomingMessages.TryDequeue(out NetIncomingMessage retval) && retval.MessageType == NetIncomingMessageType.StatusChanged)
+            if (_releasedIncomingMessages.TryDequeue(out NetIncomingMessage retval) && retval.MessageType == NetIncomingMessageType.StatusChanged)
             {
                 retval.SenderConnection.m_visibleStatus = (NetConnectionStatus)retval.PeekByte();
             }
@@ -227,7 +220,7 @@ namespace Lidgren.Network
 		/// </summary>
 		public int ReadMessages(IList<NetIncomingMessage> addTo)
 		{
-			int added = m_releasedIncomingMessages.TryDrain(addTo);
+			int added = _releasedIncomingMessages.TryDrain(addTo);
 			if (added > 0)
 			{
 				for (int i = 0; i < added; i++)
@@ -302,10 +295,10 @@ namespace Lidgren.Network
 
 			lock (m_connections)
 			{
-				if (m_status == NetPeerStatus.NotRunning)
+				if (_status == NetPeerStatus.NotRunning)
 					throw new NetException("Must call Start() first");
 
-				if (m_connectionLookup.ContainsKey(remoteEndPoint))
+				if (_connectionLookup.ContainsKey(remoteEndPoint))
 					throw new NetException("Already connected to that endpoint!");
 
                 if (m_handshakes.TryGetValue(remoteEndPoint, out NetConnection hs))
@@ -372,12 +365,12 @@ namespace Lidgren.Network
 		public void Shutdown(string bye)
 		{
 			// called on user thread
-			if (m_socket == null)
+			if (_socket == null)
 				return; // already shut down
 
 			LogDebug("Shutdown requested");
-			m_shutdownReason = bye;
-			m_status = NetPeerStatus.ShutdownRequested;
+			_shutdownReason = bye;
+			_status = NetPeerStatus.ShutdownRequested;
 		}
 	}
 }

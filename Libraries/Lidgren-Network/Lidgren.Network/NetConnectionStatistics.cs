@@ -38,7 +38,7 @@ namespace Lidgren.Network
 	/// </summary>
 	public sealed class NetConnectionStatistics
 	{
-		private readonly NetConnection m_connection;
+		private readonly NetConnection _connection;
 
 		internal long m_sentPackets;
 		internal long m_receivedPackets;
@@ -56,7 +56,7 @@ namespace Lidgren.Network
 
 		internal NetConnectionStatistics(NetConnection conn)
 		{
-			m_connection = conn;
+			_connection = conn;
 			Reset();
 		}
 
@@ -164,7 +164,7 @@ namespace Lidgren.Network
 		{
 			StringBuilder bdr = new StringBuilder();
 			//bdr.AppendLine("Average roundtrip time: " + NetTime.ToReadable(m_connection.m_averageRoundtripTime));
-			bdr.AppendLine("Current MTU: " + m_connection.m_currentMTU);
+			bdr.AppendLine("Current MTU: " + _connection.m_currentMTU);
 			bdr.AppendLine("Sent " + m_sentBytes + " bytes in " + m_sentMessages + " messages in " + m_sentPackets + " packets");
 			bdr.AppendLine("Received " + m_receivedBytes + " bytes in " + m_receivedMessages + " messages (of which " + m_receivedFragments + " fragments) in " + m_receivedPackets + " packets");
 			bdr.AppendLine("Dropped " + m_droppedMessages + " messages (dupes/late/early)");
@@ -176,32 +176,30 @@ namespace Lidgren.Network
 
 			int numUnsent = 0;
 			int numStored = 0;
-			foreach (NetSenderChannelBase sendChan in m_connection.m_sendChannels)
+			foreach (NetSenderChannelBase sendChan in _connection.m_sendChannels)
 			{
 				if (sendChan == null)
 					continue;
 				numUnsent += sendChan.QueuedSendsCount;
 
-				var relSendChan = sendChan as NetReliableSenderChannel;
-				if (relSendChan != null)
-				{
-					for (int i = 0; i < relSendChan.m_storedMessages.Length; i++)
-						if (relSendChan.m_storedMessages[i].Message != null)
-							numStored++;
-				}
-			}
+                if (sendChan is NetReliableSenderChannel relSendChan)
+                {
+                    for (int i = 0; i < relSendChan.m_storedMessages.Length; i++)
+                        if (relSendChan.m_storedMessages[i].Message != null)
+                            numStored++;
+                }
+            }
 
 			int numWithheld = 0;
-			foreach (NetReceiverChannelBase recChan in m_connection.m_receiveChannels)
+			foreach (NetReceiverChannelBase recChan in _connection.m_receiveChannels)
 			{
-				var relRecChan = recChan as NetReliableOrderedReceiver;
-				if (relRecChan != null)
-				{
-					for (int i = 0; i < relRecChan.m_withheldMessages.Length; i++)
-						if (relRecChan.m_withheldMessages[i] != null)
-							numWithheld++;
-				}
-			}
+                if (recChan is NetReliableOrderedReceiver relRecChan)
+                {
+                    for (int i = 0; i < relRecChan.m_withheldMessages.Length; i++)
+                        if (relRecChan.m_withheldMessages[i] != null)
+                            numWithheld++;
+                }
+            }
 
 			bdr.AppendLine("Unsent messages: " + numUnsent);
 			bdr.AppendLine("Stored messages: " + numStored);

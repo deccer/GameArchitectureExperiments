@@ -149,7 +149,7 @@ namespace Lidgren.Network
                     // this can be resolved to a local broadcast addresss e.g 192.168.x.255
                     targetCopy.Address = m_configuration.BroadcastAddress;
                     targetCopy.Port = target.Port;
-                    m_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
+                    _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
                 }
                 else if (m_configuration.DualStack && m_configuration.LocalAddress.AddressFamily == AddressFamily.InterNetworkV6)
                 {
@@ -161,7 +161,7 @@ namespace Lidgren.Network
                     targetCopy.Address = target.Address;
                 }
 
-                int bytesSent = m_socket.SendTo(data, 0, numBytes, SocketFlags.None, targetCopy);
+                int bytesSent = _socket.SendTo(data, 0, numBytes, SocketFlags.None, targetCopy);
 				if (numBytes != bytesSent)
 					LogWarning("Failed to send the full " + numBytes + "; only " + bytesSent + " bytes sent in packet!");
 
@@ -190,7 +190,7 @@ namespace Lidgren.Network
 			finally
 			{
 				if (target.Address.Equals(ba))
-					m_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, false);
+					_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, false);
 			}
 			return true;
 		}
@@ -199,8 +199,8 @@ namespace Lidgren.Network
 		{
 			try
 			{
-				m_socket.DontFragment = true;
-				int bytesSent = m_socket.SendTo(m_sendBuffer, 0, numBytes, SocketFlags.None, target);
+				_socket.DontFragment = true;
+				int bytesSent = _socket.SendTo(m_sendBuffer, 0, numBytes, SocketFlags.None, target);
 				if (numBytes != bytesSent)
 					LogWarning("Failed to send the full " + numBytes + "; only " + bytesSent + " bytes sent in packet!");
 
@@ -226,7 +226,7 @@ namespace Lidgren.Network
 			}
 			finally
 			{
-				m_socket.DontFragment = false;
+				_socket.DontFragment = false;
 			}
 			return true;
 		}

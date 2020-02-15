@@ -1,15 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace Lidgren.Network
 {
-	/// <summary>
-	/// Example class; not very good encryption
-	/// </summary>
-	public class NetXorEncryption : NetEncryption
+    /// <summary>
+    /// Example class; not very good encryption
+    /// </summary>
+    public class NetXorEncryption : NetEncryption
 	{
-		private byte[] m_key;
+		private byte[] _key;
 
 		/// <summary>
 		/// NetXorEncryption constructor
@@ -17,13 +16,13 @@ namespace Lidgren.Network
 		public NetXorEncryption(NetPeer peer, byte[] key)
 			: base(peer)
 		{
-			m_key = key;
+			_key = key;
 		}
 
 		public override void SetKey(byte[] data, int offset, int count)
 		{
-			m_key = new byte[count];
-			Array.Copy(data, offset, m_key, 0, count);
+			_key = new byte[count];
+			Array.Copy(data, offset, _key, 0, count);
 		}
 
 		/// <summary>
@@ -32,7 +31,7 @@ namespace Lidgren.Network
 		public NetXorEncryption(NetPeer peer, string key)
 			: base(peer)
 		{
-			m_key = Encoding.UTF8.GetBytes(key);
+			_key = Encoding.UTF8.GetBytes(key);
 		}
 
 		/// <summary>
@@ -43,8 +42,8 @@ namespace Lidgren.Network
 			int numBytes = msg.LengthBytes;
 			for (int i = 0; i < numBytes; i++)
 			{
-				int offset = i % m_key.Length;
-				msg.m_data[i] = (byte)(msg.m_data[i] ^ m_key[offset]);
+				int offset = i % _key.Length;
+				msg.m_data[i] = (byte)(msg.m_data[i] ^ _key[offset]);
 			}
 			return true;
 		}
@@ -57,8 +56,8 @@ namespace Lidgren.Network
 			int numBytes = msg.LengthBytes;
 			for (int i = 0; i < numBytes; i++)
 			{
-				int offset = i % m_key.Length;
-				msg.m_data[i] = (byte)(msg.m_data[i] ^ m_key[offset]);
+				int offset = i % _key.Length;
+				msg.m_data[i] = (byte)(msg.m_data[i] ^ _key[offset]);
 			}
 			return true;
 		}

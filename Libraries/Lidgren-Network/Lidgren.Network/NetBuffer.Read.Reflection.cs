@@ -49,7 +49,7 @@ namespace Lidgren.Network
 				object value;
 
                 // find read method
-                if (s_readMethods.TryGetValue(fi.FieldType, out MethodInfo readMethod))
+                if (_readMethods.TryGetValue(fi.FieldType, out MethodInfo readMethod))
                 {
                     // read value
                     value = readMethod.Invoke(this, null);
@@ -85,7 +85,7 @@ namespace Lidgren.Network
 				object value;
 
                 // find read method
-                if (s_readMethods.TryGetValue(fi.PropertyType, out MethodInfo readMethod))
+                if (_readMethods.TryGetValue(fi.PropertyType, out MethodInfo readMethod))
                 {
                     // read value
                     value = readMethod.Invoke(this, null);
