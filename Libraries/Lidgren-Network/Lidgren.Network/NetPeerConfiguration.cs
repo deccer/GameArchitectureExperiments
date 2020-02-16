@@ -58,7 +58,7 @@ namespace Lidgren.Network
         internal float m_connectionTimeout;
         internal bool m_enableUPnP;
         internal bool m_autoFlushSendQueue;
-        private NetUnreliableSizeBehaviour m_unreliableSizeBehaviour;
+        private NetUnreliableSizeBehaviour _unreliableSizeBehaviour;
         internal bool m_suppressUnreliableUnorderedAcks;
 
         internal NetIncomingMessageType m_disabledTypes;
@@ -120,7 +120,7 @@ namespace Lidgren.Network
             m_autoExpandMTU = false;
             m_expandMTUFrequency = 2.0f;
             m_expandMTUFailAttempts = 5;
-            m_unreliableSizeBehaviour = NetUnreliableSizeBehaviour.IgnoreMTU;
+            _unreliableSizeBehaviour = NetUnreliableSizeBehaviour.IgnoreMTU;
 
             m_loss = 0.0f;
             m_minimumOneWayLatency = 0.0f;
@@ -180,8 +180,8 @@ namespace Lidgren.Network
         /// </summary>
         public NetUnreliableSizeBehaviour UnreliableSizeBehaviour
         {
-            get { return m_unreliableSizeBehaviour; }
-            set { m_unreliableSizeBehaviour = value; }
+            get { return _unreliableSizeBehaviour; }
+            set { _unreliableSizeBehaviour = value; }
         }
 
         /// <summary>
