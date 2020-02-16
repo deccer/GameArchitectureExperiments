@@ -27,7 +27,8 @@ namespace GameDemo
             {
                 Location = isCentered
                     ? new Point(primaryDisplayBounds.Width / 2 - width / 2, primaryDisplayBounds.Height / 2 - height / 2)
-                    : new Point(0, 0)
+                    : new Point(0, 0),
+                    VSync = VSyncMode.Adaptive
             };
             return gameWindow;
         }

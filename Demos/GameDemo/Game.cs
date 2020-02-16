@@ -28,6 +28,7 @@ namespace GameDemo
 
         private void Cleanup()
         {
+            _gameClient.Cleanup();
             _gameServer.Shutdown();
             _logger.Debug("Cleaning up...");
             _logger.Debug("Cleaning up...Done.");
@@ -38,6 +39,8 @@ namespace GameDemo
             _logger.Debug("Initializing...");
 
             InitializeServer();
+
+            _gameClient.Initialize();
 
             _logger.Debug("Initializing...Done.");
         }

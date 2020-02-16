@@ -1,5 +1,6 @@
 ﻿using System;
 using DryIoc;
+using GameDemo.Graphics;
 using Serilog;
 
 namespace GameDemo
@@ -30,6 +31,7 @@ namespace GameDemo
             container.Register<Program>(Reuse.Singleton);
             container.Register<IGameWindowFactory, GameWindowFactory>(Reuse.Singleton);
             container.Register<IGameServer, GameServer>(Reuse.Singleton);
+            container.Register<IShaderFactory, ShaderFactory>(Reuse.Singleton);
             container.Register<IGameClient, GameClient>(Reuse.Singleton);
             container.Register<IGame, Game>(Reuse.Singleton);
             return container;
