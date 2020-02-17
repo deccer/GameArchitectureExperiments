@@ -140,6 +140,23 @@ namespace GameDemo
                 _window.Close();
             }
 
+            if (currentKeyboardState.IsKeyDown(Key.W))
+            {
+                _modelMatrix *= Matrix4.CreateTranslation(0, 0, 0.1f);
+            }
+            if (currentKeyboardState.IsKeyDown(Key.S))
+            {
+                _modelMatrix *= Matrix4.CreateTranslation(0, 0, -0.1f);
+            }
+            if (currentKeyboardState.IsKeyDown(Key.A))
+            {
+                _modelMatrix *= Matrix4.CreateTranslation(0.1f, 0, 0);
+            }
+            if (currentKeyboardState.IsKeyDown(Key.D))
+            {
+                _modelMatrix *= Matrix4.CreateTranslation(-0.1f, 0, 0);
+            }
+
             _previousKeyboardState = currentKeyboardState;
         }
 
